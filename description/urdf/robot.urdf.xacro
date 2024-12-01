@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="batmobil">
+
+  <!-- Include core_model -->
+  <xacro:include filename="core_model.xacro" />
+
+  <!-- Include gz_config -->
+  <xacro:include filename="gz_config.xacro" />
+
+</robot>

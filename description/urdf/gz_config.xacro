@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="gazebo_plugins" params="">
+    <!-- Gazebo Diff-Drive Plugin -->
+    <gazebo>
+      <plugin 
+        filename="gz-sim-diff-drive-system" 
+        name="gz::sim::systems::DiffDrive">
+        <left_joint>base_to_left_wheel</left_joint>
+        <right_joint>base_to_right_wheel</right_joint>
+        <wheel_separation>0.95</wheel_separation>
+        <wheel_radius>0.3</wheel_radius>
+        <odom_publish_frequency>10</odom_publish_frequency>
+        <odom_frame>odom</odom_frame>
+        <robot_base_frame>base_link</robot_base_frame>
+        <topic>cmd_vel</topic>
+      </plugin>
+      </gazebo>
+
+    <!-- Gazebo Physics Parameters -->
+    <gazebo>
+      <static>false</static>
+    </gazebo>
+  </xacro:macro>
+</robot>
