@@ -1,10 +1,18 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="batmobil">
 
+
+
+  <xacro:arg name="sim_mode" default="true" />
   <!-- Include core_model -->
   <xacro:include filename="core_model.xacro" />
 
   <!-- Include gz_config -->
-  <xacro:include filename="gz_config.xacro" />
+  <xacro:include filename="ros2_control.xacro" />
+
+
+  <!-- Call gazebo_plugins macro -->
+  <!--xacro:gazebo_plugins/-->
+
 
 </robot>

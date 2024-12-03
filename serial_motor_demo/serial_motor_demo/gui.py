@@ -15,7 +15,7 @@ class MotorGui(Node):
         self.motor_command_pub = self.create_publisher(MotorCommand, 'motor_command', 10)
         # JointState Publisher für das Modell in RViz
         self.joint_state_pub = self.create_publisher(JointState, '/joint_states', 10)
-        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 30)
 
         # GUI-Setup
         self.tk = Tk()
