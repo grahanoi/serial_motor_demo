@@ -28,7 +28,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'robot_description': Command([
-                    'xacro ', '/home/noi/serial_motor/scr/serial_motor_demo/description/urdf/robot.urdf.xacro'
+                    'xacro ', '/home/noi/batmobil/scr/serial_motor_demo/description/urdf/robot.urdf.xacro'
                 ])
             }]
         ),

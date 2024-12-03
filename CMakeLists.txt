@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(serial_motor_demo_msgs)
+project(batmobile)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -32,15 +32,9 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# Find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/MotorCommand.msg"
-  "msg/MotorVels.msg"
-  "msg/EncoderVals.msg"
+install(
+  DIRECTORY config description launch
+  DESTINATION share/${PROJECT_NAME}
 )
-
 
 ament_package()
