@@ -4,8 +4,8 @@
     <!-- Gazebo Diff-Drive Plugin -->
     <gazebo>
       <plugin 
-        filename="gz-sim-diff-drive-system" 
-        name="gz::sim::systems::DiffDrive">
+        filename="libgz_ros2_control-system.so" 
+        name="gz_ros2_control::GazeboSimROS2ControlPlugin">
         <left_joint>base_to_left_wheel</left_joint>
         <right_joint>base_to_right_wheel</right_joint>
         <wheel_separation>0.95</wheel_separation>

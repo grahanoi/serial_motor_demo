@@ -10,9 +10,12 @@
   <!-- Include gz_config -->
   <xacro:include filename="ros2_control.xacro" />
 
+  <!-- Include gz_config -->
+  <!-- xacro:include filename="gz_config.xacro" /-->
+
 
   <!-- Call gazebo_plugins macro -->
-  <!--xacro:gazebo_plugins/-->
+  <!-- xacro:gazebo_plugins/-->
 
 
 </robot>
