@@ -4,6 +4,8 @@ import math
 from tkinter import *
 from serial_motor_demo_msgs.msg import MotorCommand
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import TransformStamped
+from tf2_msgs.msg import TFMessage
 from geometry_msgs.msg import Twist
 
 class MotorGui(Node):
@@ -16,6 +18,12 @@ class MotorGui(Node):
         # JointState Publisher für das Modell in RViz
         self.joint_state_pub = self.create_publisher(JointState, '/joint_states', 10)
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 30)
+        self.tf_pub = self.create_publisher(TFMessage, '/tf', 10)
+        self.base_x = 0.0
+        self.base_y = 0.0
+        self.theta = 0.0
+        self.timer = self.create_timer(0.1, self.publish_tf)
+
 
         # GUI-Setup
         self.tk = Tk()
@@ -56,6 +64,25 @@ class MotorGui(Node):
         # Initial Mode
         self.pwm_mode = True
 
+    def publish_tf(self):
+        self.base_x += 0.05  # Move forward
+        self.theta += 0.01   # Rotate slightly
+
+        transform = TransformStamped()
+        transform.header.stamp = self.get_clock().now().to_msg()
+        transform.header.frame_id = 'odom'
+        transform.child_frame_id = 'base_link'
+        transform.transform.translation.x = self.base_x
+        transform.transform.translation.y = self.base_y
+        transform.transform.translation.z = 0.0
+        transform.transform.rotation.z = math.sin(self.theta / 2)
+        transform.transform.rotation.w = math.cos(self.theta / 2)
+
+        tf_msg = TFMessage(transforms=[transform])
+        self.tf_pub.publish(tf_msg)
+
+
+
     def switch_mode(self):
         self.pwm_mode = not self.pwm_mode
         if self.pwm_mode:
@@ -90,7 +117,7 @@ class MotorGui(Node):
         # Nachricht für das Modell in RViz
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
-        joint_state_msg.name = ['base_to_left_wheel', 'base_to_right_wheel']
+        joint_state_msg.name = ['robot_left_wheel_joint', 'robot_right_wheel_joint']
         joint_state_msg.position = [
             float(self.m1.get() * 2 * math.pi / 255),  # Skaliert von PWM auf Radianten
             float(self.m2.get() * 2 * math.pi / 255)   # Skaliert von PWM auf Radianten
@@ -114,7 +141,7 @@ class MotorGui(Node):
         # Modell in RViz anhalten
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
-        joint_state_msg.name = ['base_to_left_wheel', 'base_to_right_wheel']
+        joint_state_msg.name = ['robot_left_wheel_joint', 'robot_right_wheel_joint']
         joint_state_msg.position = [0.0, 0.0]
         self.joint_state_pub.publish(joint_state_msg)
 

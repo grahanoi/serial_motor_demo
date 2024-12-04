@@ -5,15 +5,12 @@
 
   <xacro:arg name="sim_mode" default="true" />
   <!-- Include core_model -->
-  <xacro:include filename="core_model.xacro" />
+  <xacro:include filename="update_core.xacro" />
   
 
   <!-- Include gz_config -->
-  <!--xacro:include filename="ros2_control.xacro" /-->
+  <xacro:include filename="materials.xacro" />
 
-
-  <!-- Call gazebo_plugins macro -->
-  <!--xacro:gazebo_plugins/-->
 
 
 </robot>
