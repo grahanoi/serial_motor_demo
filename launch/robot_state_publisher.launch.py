@@ -33,7 +33,7 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='static_transform_publisher',
             output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'robot_base_link', 'odom']  # Update these values as needed
+            arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'odom']  # Update these values as needed
         ),
         # Node for MotorGui
         Node(

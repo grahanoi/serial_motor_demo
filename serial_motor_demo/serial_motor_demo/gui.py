@@ -1,162 +1,193 @@
 import rclpy
 from rclpy.node import Node
-import math
+import time
 from tkinter import *
+import math
+
 from serial_motor_demo_msgs.msg import MotorCommand
-from sensor_msgs.msg import JointState
-from geometry_msgs.msg import TransformStamped
-from tf2_msgs.msg import TFMessage
-from geometry_msgs.msg import Twist
+from serial_motor_demo_msgs.msg import MotorVels
+from serial_motor_demo_msgs.msg import EncoderVals
+
 
 class MotorGui(Node):
 
     def __init__(self):
         super().__init__('motor_gui')
 
-        # Publisher für den physischen Roboter
-        self.motor_command_pub = self.create_publisher(MotorCommand, 'motor_command', 10)
-        # JointState Publisher für das Modell in RViz
-        self.joint_state_pub = self.create_publisher(JointState, '/joint_states', 10)
-        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 30)
-        self.tf_pub = self.create_publisher(TFMessage, '/tf', 10)
-        self.base_x = 0.0
-        self.base_y = 0.0
-        self.theta = 0.0
-        self.timer = self.create_timer(0.1, self.publish_tf)
+        self.publisher = self.create_publisher(MotorCommand, 'motor_command', 10)
 
+        self.speed_sub = self.create_subscription(
+            MotorVels,
+            'motor_vels',
+            self.motor_vel_callback,
+            10)
 
-        # GUI-Setup
+        self.encoder_sub = self.create_subscription(
+            EncoderVals,
+            'encoder_vals',
+            self.encoder_val_callback,
+            10)
+
         self.tk = Tk()
         self.tk.title("Serial Motor GUI")
         root = Frame(self.tk)
         root.pack(fill=BOTH, expand=True)
 
+        
+
         Label(root, text="Serial Motor GUI").pack()
 
-        # Mode Buttons
         mode_frame = Frame(root)
         mode_frame.pack(fill=X)
-        self.mode_lbl = Label(mode_frame, text="PWM Mode")
+
+
+        self.mode_lbl = Label(mode_frame, text="ZZZZ")
         self.mode_lbl.pack(side=LEFT)
-        self.mode_btn = Button(mode_frame, text="Switch to Feedback Mode", command=self.switch_mode)
+        self.mode_btn = Button(mode_frame, text="ZZZZ", command=self.switch_mode)
         self.mode_btn.pack(expand=True)
 
-        # Motor 1
+
+        slider_max_frame = Frame(root)
+        slider_max_frame.pack(fill=X)
+        self.slider_max_label = Label(slider_max_frame, text="Max Rev/sec", state="disabled")
+        self.slider_max_label.pack(side=LEFT)
+        self.slider_max_val_box = Entry(slider_max_frame, state="disabled")
+        self.slider_max_val_box.pack(side=LEFT)
+        self.max_val_update_btn = Button(slider_max_frame, text='Update', command=self.update_scale_limits, state="disabled")
+        self.max_val_update_btn.pack(side=LEFT)
+
+
         m1_frame = Frame(root)
         m1_frame.pack(fill=X)
         Label(m1_frame, text="Motor 1").pack(side=LEFT)
         self.m1 = Scale(m1_frame, from_=-255, to=255, orient=HORIZONTAL)
         self.m1.pack(side=LEFT, fill=X, expand=True)
 
-        # Motor 2
         m2_frame = Frame(root)
         m2_frame.pack(fill=X)
         Label(m2_frame, text="Motor 2").pack(side=LEFT)
-        self.m2 = Scale(m2_frame, from_=-255, to=255, orient=HORIZONTAL)
+        self.m2 = Scale(m2_frame, from_=-255, to=255, resolution=1, orient=HORIZONTAL)
         self.m2.pack(side=LEFT, fill=X, expand=True)
 
-        # Motor Buttons
+        self.m2.config(to=10)
+
         motor_btns_frame = Frame(root)
         motor_btns_frame.pack()
         Button(motor_btns_frame, text='Send Once', command=self.send_motor_once).pack(side=LEFT)
-        Button(motor_btns_frame, text='Stop Motors', command=self.stop_motors).pack(side=LEFT)
+        Button(motor_btns_frame, text='Send Cont.', command=self.show_values, state="disabled").pack(side=LEFT)
+        Button(motor_btns_frame, text='Stop Send', command=self.show_values, state="disabled").pack(side=LEFT)
+        Button(motor_btns_frame, text='Stop Mot', command=self.stop_motors).pack(side=LEFT)
+        
 
-        # Initial Mode
-        self.pwm_mode = True
+        enc_frame = Frame(root)
+        enc_frame.pack(fill=X)
 
-    def publish_tf(self):
-        self.base_x += 0.05  # Move forward
-        self.theta += 0.01   # Rotate slightly
+        self.enc_lbl = Label(enc_frame, text="Encoders: ")
+        self.enc_lbl.pack(side=LEFT)
+        self.mot_1_enc_lbl = Label(enc_frame, text="XXX")
+        self.mot_1_enc_lbl.pack(side=LEFT)
+        self.mot_2_enc_lbl = Label(enc_frame, text="XXX")
+        self.mot_2_enc_lbl.pack(side=LEFT)
 
-        transform = TransformStamped()
-        transform.header.stamp = self.get_clock().now().to_msg()
-        transform.header.frame_id = 'odom'
-        transform.child_frame_id = 'base_link'
-        transform.transform.translation.x = self.base_x
-        transform.transform.translation.y = self.base_y
-        transform.transform.translation.z = 0.0
-        transform.transform.rotation.z = math.sin(self.theta / 2)
-        transform.transform.rotation.w = math.cos(self.theta / 2)
+        speed_frame = Frame(root)
+        speed_frame.pack(fill=X)
 
-        tf_msg = TFMessage(transforms=[transform])
-        self.tf_pub.publish(tf_msg)
+        self.spd_lbl = Label(enc_frame, text="Speed rev/s: ")
+        self.spd_lbl.pack(side=LEFT)
+        self.mot_1_spd_lbl = Label(enc_frame, text="XXX")
+        self.mot_1_spd_lbl.pack(side=LEFT)
+        self.mot_2_spd_lbl = Label(enc_frame, text="XXX")
+        self.mot_2_spd_lbl.pack(side=LEFT)
+
+
+        self.set_mode(True)
+
+
+    def show_values(self):
+        print (self.m1.get(), self.m2.get())
+
+    def send_motor_once(self):
+        msg = MotorCommand()
+        msg.is_pwm = self.pwm_mode
+        if (self.pwm_mode):
+            msg.mot_1_req_rad_sec = float(self.m1.get())
+            msg.mot_2_req_rad_sec = float(self.m2.get())
+        else:
+            msg.mot_1_req_rad_sec = float(self.m1.get()*2*math.pi)
+            msg.mot_2_req_rad_sec = float(self.m2.get()*2*math.pi)
+
+        self.publisher.publish(msg)
+
+    def stop_motors(self):
+        msg = MotorCommand()
+        msg.is_pwm = self.pwm_mode
+        msg.mot_1_req_rad_sec = 0.0
+        msg.mot_2_req_rad_sec = 0.0
+        self.publisher.publish(msg)
+
+    def set_mode(self, new_mode):
+        self.pwm_mode = new_mode
+        if (self.pwm_mode):
+            self.mode_lbl.config(text="Current Mode: PWM")
+            self.mode_btn.config(text="Switch to Feedback Mode")
+            self.slider_max_label.config(state="disabled")
+            self.slider_max_val_box.config(state="disabled")
+            self.max_val_update_btn.config(state="disabled")
+        else:
+            self.mode_lbl.config(text="Current Mode: Feedback")
+            self.mode_btn.config(text="Switch to PWM Mode")
+            self.slider_max_label.config(state="normal")
+            self.slider_max_val_box.config(state="normal")
+            self.max_val_update_btn.config(state="normal")
+
+        self.update_scale_limits()
+
+    def motor_vel_callback(self, motor_vels):
+        mot_1_spd_rev_sec = motor_vels.mot_1_rad_sec / (2*math.pi)
+        mot_2_spd_rev_sec = motor_vels.mot_2_rad_sec / (2*math.pi)
+        self.mot_1_spd_lbl.config(text=f"{mot_1_spd_rev_sec:.2f}")
+        self.mot_2_spd_lbl.config(text=f"{mot_2_spd_rev_sec:.2f}")
+
+    def encoder_val_callback(self, encoder_vals):
+        self.mot_1_enc_lbl.config(text=f"{encoder_vals.mot_1_enc_val}")
+        self.mot_2_enc_lbl.config(text=f"{encoder_vals.mot_2_enc_val}")
 
 
 
     def switch_mode(self):
-        self.pwm_mode = not self.pwm_mode
-        if self.pwm_mode:
-            self.mode_lbl.config(text="PWM Mode")
-            self.mode_btn.config(text="Switch to Feedback Mode")
+        self.set_mode(not self.pwm_mode)
+
+    def update_scale_limits(self):
+        if (self.pwm_mode):
+            self.m1.config(from_=-255, to=255, resolution=1)
+            self.m2.config(from_=-255, to=255, resolution=1)
         else:
-            self.mode_lbl.config(text="Feedback Mode")
-            self.mode_btn.config(text="Switch to PWM Mode")
+            lim = float(self.slider_max_val_box.get())
+            self.m1.config(from_=-lim, to=lim, resolution=0.1)
+            self.m2.config(from_=-lim, to=lim, resolution=0.1)
 
-    def send_motor_once(self):
-        # Nachricht für den physischen Roboter
-        motor_msg = MotorCommand()
-        motor_msg.is_pwm = self.pwm_mode
-        if self.pwm_mode:
-            motor_msg.mot_1_req_rad_sec = float(self.m1.get())
-            motor_msg.mot_2_req_rad_sec = float(self.m2.get())
-        else:
-            motor_msg.mot_1_req_rad_sec = float(self.m1.get() * 2 * math.pi)
-            motor_msg.mot_2_req_rad_sec = float(self.m2.get() * 2 * math.pi)
 
-        self.motor_command_pub.publish(motor_msg)
-
-        # Nachricht für das Diff-Drive-Plugin in Gazebo
-        scaling_factor = 0.5
-        twist_msg = Twist()
-        twist_msg.linear.x = scaling_factor*float(self.m1.get()) / 255.0  # Skaliert PWM auf lineare Geschwindigkeit
-        twist_msg.angular.z = scaling_factor*float(self.m2.get()) / 255.0  # Skaliert PWM auf Winkelgeschwindigkeit
-        self.cmd_vel_pub.publish(twist_msg)
-        # Debugging
-        self.get_logger().info(f"Sent cmd_vel: linear.x={twist_msg.linear.x}, angular.z={twist_msg.angular.z}")
-
-        # Nachricht für das Modell in RViz
-        joint_state_msg = JointState()
-        joint_state_msg.header.stamp = self.get_clock().now().to_msg()
-        joint_state_msg.name = ['robot_left_wheel_joint', 'robot_right_wheel_joint']
-        joint_state_msg.position = [
-            float(self.m1.get() * 2 * math.pi / 255),  # Skaliert von PWM auf Radianten
-            float(self.m2.get() * 2 * math.pi / 255)   # Skaliert von PWM auf Radianten
-        ]
-        self.joint_state_pub.publish(joint_state_msg)
-
-    def stop_motors(self):
-        # Motoren stoppen
-        motor_msg = MotorCommand()
-        motor_msg.is_pwm = self.pwm_mode
-        motor_msg.mot_1_req_rad_sec = 0.0
-        motor_msg.mot_2_req_rad_sec = 0.0
-        self.motor_command_pub.publish(motor_msg)
-
-        # Diff-Drive stoppen
-        twist_msg = Twist()
-        twist_msg.linear.x = 0.0
-        twist_msg.angular.z = 0.0
-        self.cmd_vel_pub.publish(twist_msg)
-
-        # Modell in RViz anhalten
-        joint_state_msg = JointState()
-        joint_state_msg.header.stamp = self.get_clock().now().to_msg()
-        joint_state_msg.name = ['robot_left_wheel_joint', 'robot_right_wheel_joint']
-        joint_state_msg.position = [0.0, 0.0]
-        self.joint_state_pub.publish(joint_state_msg)
 
     def update(self):
         self.tk.update()
 
+
+
+
+
 def main(args=None):
+    
     rclpy.init(args=args)
 
     motor_gui = MotorGui()
 
-    rate = motor_gui.create_rate(20)
+    rate = motor_gui.create_rate(20)    
     while rclpy.ok():
         rclpy.spin_once(motor_gui)
         motor_gui.update()
 
+
     motor_gui.destroy_node()
     rclpy.shutdown()
+
+
